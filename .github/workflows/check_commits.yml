@@ -1,0 +1,40 @@
+name: Check Discord Datamining Commits
+
+on:
+  schedule:
+    # 1時間に1回実行する設定 (分 時 日 月 曜日 / UTC基準)
+    - cron: '0 * * * *'
+  workflow_dispatch: # 手動でいつでも実行できるようにするボタンを有効化
+
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: リポジトリのコードをチェックアウト
+      uses: actions/checkout@v4
+
+    - name: Node.js のセットアップ
+      uses: actions/setup-node@v4
+      with:
+        node-mode: '20'
+
+    - name: 前回実行時のキャッシュ(日時データ)を復元
+      uses: actions/cache@v4
+      with:
+        path: last_commit_date.txt
+        key: commit-date-cache-${{ github.run_id }}
+        restore-keys: |
+          commit-date-cache-
+
+    - name: スクリプトの実行
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: node index.js
+
+    - name: 最新のコミット日時キャッシュを保存
+      uses: actions/cache/save@v4
+      if: always() # エラーが起きてもキャッシュの保存フェーズは通す
+      with:
+        path: last_commit_date.txt
+        key: commit-date-cache-${{ github.run_id }}
